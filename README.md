@@ -2,135 +2,151 @@
 
 # ccp
 
-**Claude Code Provider CLI**
+**Claude Code Provider CLI** — switch API keys, encrypted at rest.
 
-Secure, encrypted API key management for Claude Code.
+`27 KB` · `1 file` · `DPAPI` · `PowerShell 5.1`
 
-`Single file` · `Zero deps` · `DPAPI encrypted` · `Windows`
-
-[English](#features) · [中文](README_CN.md)
+[中文](README_CN.md)
 
 </div>
 
 ---
 
-## Why ccp?
+## the problem
 
-If you use Claude Code with third-party LLM providers (Zhipu, DeepSeek, Aliyun, etc.), you're managing API keys by hand — editing JSON files, pasting keys in plaintext, hoping nothing leaks.
+You use Claude Code with a third-party API provider. Every time you switch, you're hand-editing `~/.claude/settings.json` and pasting keys in plaintext. Your API key sits there, readable by anything running under your user account.
 
-**ccp fixes this:**
+ccp wraps this into six commands. Keys are encrypted with Windows DPAPI before they touch disk.
 
 ```
-Before:  Edit JSON → paste plaintext key → switch = copy files → key sprawl
-After:   ccp add zhipu → ccp switch zhipu → done
+# before
+notepad ~/.claude/settings.json     # paste key, hope for the best
+
+# after
+ccp add openrouter                  # encrypted at rest
+ccp switch openrouter               # update settings.json safely
 ```
 
-### What makes it different
+## when to use ccp (and when not to)
 
-| | ccp | claude-provider-switch | claudecode-switch |
-|---|---|---|---|
-| **Key encryption** | ✅ DPAPI (Windows native) | ❌ Plaintext | ❌ Plaintext |
-| **File permissions** | ✅ User-only ACL | ❌ Not enforced | ❌ Not enforced |
-| **Single file** | ✅ 1 file, no runtime deps | ❌ Rust build required | ❌ Shell + wrapper |
-| **Connectivity test** | ✅ DNS → TCP → API | ❌ | ❌ |
-| **Preset providers** | ✅ 5 built-in | ❌ | ❌ |
-| **Non-interactive mode** | ✅ `--key --url` | ❌ | ❌ |
-| **Windows native** | ✅ PowerShell 5.1 | ❌ Rust/cargo | ❌ Bash only |
+ccp is a 27 KB PowerShell script. It does one thing: manage API keys for Claude Code on Windows, with encryption.
 
-## Quick Start
+**If you need** a cross-platform desktop app, provider health monitoring, MCP management, session history, cost tracking, or proxy support — use [CC Switch](https://github.com/farion1231/cc-switch). It's excellent and has 96k stars for good reason.
+
+**If you want** a single file you can read in 30 seconds, that encrypts keys with the same mechanism as Windows Credential Manager, and runs on any Windows machine with zero setup — ccp.
+
+| | ccp | CC Switch | switch-claude-cli | claudecode-switch |
+|---|---|---|---|---|
+| Key encryption | DPAPI | SQLite (local) | plaintext JSON | plaintext |
+| File size | 27 KB | ~100 MB | ~10 MB (npm) | ~5 KB (bash) |
+| Dependencies | none (PS 5.1) | Tauri + Rust + React | Node.js 18+ | bash + Node |
+| Install | `irm ... \| iex` | .msi installer | `npm i -g` | shell script |
+| Cross-platform | Windows only | Win / Mac / Linux | Win / Mac / Linux | Mac / Linux |
+| What it manages | Claude Code | 7 tools, MCP, sessions | Claude Code | Claude Code |
+| Connectivity test | DNS → TCP → API | built-in proxy | health check | — |
+
+ccp trades scope for simplicity. That's the tradeoff.
+
+## quick start
 
 ```powershell
-# 1. Download (one-liner)
+# install (one line)
 irm https://raw.githubusercontent.com/zhelunSun/ccp/main/ccp.ps1 | iex
 
-# 2. Add your provider (2 prompts: name + key)
+# add a provider
 ccp add zhipu
 
-# 3. Switch and go
+# switch and launch
 ccp switch zhipu
 claude
 ```
 
-## Requirements
-
-- **Windows 10/11**
-- **PowerShell 5.1+** (pre-installed)
-- **Claude Code CLI**
-
-## Commands
+## commands
 
 | Command | What it does |
 |---------|-------------|
-| `ccp` | Show help |
-| `ccp add {slug}` | Add provider (interactive or `--key --url`) |
-| `ccp switch {slug}` | Switch active provider |
-| `ccp list` | Show all providers (active highlighted) |
-| `ccp test {slug}` | DNS → TCP → API connectivity check |
-| `ccp remove {slug}` | Delete a provider profile |
+| `ccp add {name}` | Add provider (interactive or `--key --url`) |
+| `ccp switch {name}` | Set active provider |
+| `ccp list` | Show all providers |
+| `ccp test {name}` | DNS → TCP → API connectivity check |
+| `ccp remove {name}` | Delete a provider |
 | `ccp migrate` | Encrypt existing plaintext profiles |
 | `ccp update` | Self-update from GitHub |
 
-### Examples
+### examples
 
 ```powershell
-# Add with preset (only asks for key)
-ccp add zhipu
+# interactive — asks for key (masked input)
+ccp add openrouter
 
-# Add fully non-interactive
+# non-interactive — for scripts
 ccp add my-proxy --key sk-xxx --url https://api.example.com --model gpt-4
 
-# Three-tier connectivity test
+# three-tier connectivity test
 ccp test zhipu
-# ✅ DNS: open.bigmodel.cn → 39.156.xx.xx
-# ✅ TCP: port 443 connected (0.3s)
-# ✅ API: /v1/models responded (200 OK)
+# DNS: open.bigmodel.cn → 39.156.xx.xx
+# TCP: port 443 connected (0.3s)
+# API: /v1/models → 200 OK
 
-# Switch provider
+# switch provider
 ccp switch deepseek
-# ✅ Switched to deepseek
-# Restart terminal, then: claude
 ```
 
-## Built-in Presets
+## built-in presets
 
-Add any of these with just a name and key — URL and models are auto-filled:
+Add these with just a name and key. URL and default model are pre-filled.
 
 | Preset | Provider | Base URL |
 |--------|----------|----------|
-| `anthropic` | Anthropic | `api.anthropic.com` |
+| `anthropic` | Anthropic (official) | `api.anthropic.com` |
+| `openrouter` | OpenRouter | `openrouter.ai/api/v1` |
 | `zhipu` | Zhipu (智谱) | `open.bigmodel.cn/api/anthropic` |
 | `deepseek` | DeepSeek | `api.deepseek.com/anthropic` |
 | `aliyun` | Aliyun (阿里云) | `dashscope.aliyuncs.com` |
 | `paratera` | Paratera | `llmapi.paratera.com` |
 
-## Security
+Want to add Groq, Together AI, or another provider? Use the non-interactive mode:
 
-Keys are encrypted at rest using **Windows DPAPI** — the same encryption used by Windows Credential Manager. Only your Windows user account can decrypt them. No third-party libraries, no secrets in environment variables, no plaintext files.
+```powershell
+ccp add groq --url https://api.groq.com/openai/v1 --key gsk_xxx
+```
 
-| Property | Implementation |
-|----------|---------------|
-| Key input | `Read-Host -AsSecureString` (masked) |
-| Storage | DPAPI (`ConvertFrom-SecureString`), user-scope |
-| File ACL | Current-user-only (inherited permissions removed) |
-| Memory | `SecureString` → `BSTR` → `ZeroFreeBSTR` cleanup |
-| Logging | Keys never written to stdout/stderr/log files |
+## security
 
-> **Note:** `settings.json` contains the plaintext key because Claude Code reads it directly. This file is in `~/.claude/` which should be user-private.
+This is the part ccp actually cares about.
 
-## How it works
+Keys are encrypted with **Windows DPAPI** — the same system that backs Windows Credential Manager. The encryption is tied to your Windows user account. No third-party crypto libraries, no plaintext files in your home directory, no keys in environment variables.
+
+| Layer | How it works |
+|-------|-------------|
+| Input | `Read-Host -AsSecureString` — key never visible on screen |
+| Storage | DPAPI via `ConvertFrom-SecureString`, user scope |
+| File ACL | Inherited permissions stripped, current-user-only |
+| Memory | `SecureString` → `BSTR` → `ZeroFreeBSTR` after use |
+| Logging | Keys never appear in stdout, stderr, or log files |
+
+The active `settings.json` in `~/.claude/` does contain a plaintext key — Claude Code reads it directly. This file should be user-private (ccp sets the ACL, but verify on your machine).
+
+## requirements
+
+- Windows 10 / 11
+- PowerShell 5.1+ (ships with Windows)
+- Claude Code CLI
+
+## how it works
 
 ```
-~/.claude/profiles/zhipu.json     ← Encrypted profile (DPAPI blob)
-~/.claude/settings.json           ← Active config (Claude Code reads this)
+~/.claude/profiles/zhipu.json      encrypted profile (DPAPI blob)
+~/.claude/settings.json            active config (Claude Code reads this)
 
 ccp switch zhipu
-  1. Decrypt key from profile
-  2. Read existing settings.json (preserve effortLevel, permissions, etc.)
-  3. Update ANTHROPIC_* env vars only
-  4. Write back settings.json
+  1. decrypt key from profile
+  2. read existing settings.json (keep effortLevel, permissions, etc.)
+  3. overwrite ANTHROPIC_* fields only
+  4. write back
 ```
 
-## Profile format
+## profile format
 
 ```json
 {
@@ -145,12 +161,14 @@ ccp switch zhipu
 }
 ```
 
-## License
+## license
 
 [Apache 2.0](LICENSE)
 
 ---
 
 <div align="center">
-Made with 🤖 by <a href="https://github.com/zhelunSun">zhelunSun</a> · Auto-developed by Claude Code at 1:00 AM
+
+built by [zhelunSun](https://github.com/zhelunSun) · single file, no fuss
+
 </div>
