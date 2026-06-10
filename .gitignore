@@ -1,0 +1,19 @@
+# Internal files (not for distribution)
+internal/
+.workbuddy/
+
+# Auto-dev pipeline files (local only)
+auto-dev.ps1
+auto-dev.log
+PLAN.md
+DEVLOG.md
+VALIDATION-REPORT.md
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Editor
+*.swp
+*.swo
+*~
